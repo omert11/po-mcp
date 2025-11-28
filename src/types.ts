@@ -5,10 +5,7 @@
 export interface PoEntry {
   msgid: string;
   msgstr: string;
-  reference: string;
-  line_number: number | null;  // Line number in .po file (helps AI locate entry)
-  context: string | null;
-  flags: string[];
+  context: string | null;  // msgctxt - for disambiguation when same msgid has different meanings
 }
 
 export interface PoStatistics {
@@ -20,12 +17,8 @@ export interface PoStatistics {
 
 export interface TranslationEntry {
   msgid: string;
-  msgstr_original: string;
-  msgstr_translated: string;
-  line_number: number | null;  // Line number in source .po file
-  reference: string;  // Source code reference (file:line)
-  skipped: boolean;
-  skip_reason: string | null;
+  msgstr: string;  // New translation
+  context: string | null;  // msgctxt - for disambiguation
 }
 
 export interface ValidationResult {
@@ -54,9 +47,7 @@ export interface PreservePatterns {
 export interface UpdatePoFileResult {
   success: boolean;
   updated_entries: number;
-  skipped_entries: number;
   file_path: string;
-  git_diff_preview: string;
   errors: string[];
 }
 

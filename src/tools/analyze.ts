@@ -10,22 +10,17 @@ import { resolve } from 'path';
 
 export interface AnalyzePoFileInput {
   po_file_path: string;
-  locale?: string;
 }
 
 export interface AnalyzePoFileOutput {
+  file_path: string;
   statistics: PoStatistics;
   untranslated_entries: PoEntry[];
   fuzzy_entries: PoEntry[];
-  file_info: {
-    path: string;
-    locale: string;
-    last_modified: string;
-  };
 }
 
 export async function analyzePoFile(input: AnalyzePoFileInput): Promise<AnalyzePoFileOutput> {
-  const { po_file_path, locale } = input;
+  const { po_file_path } = input;
 
   // Validate file exists
   const absolutePath = resolve(po_file_path);
@@ -46,23 +41,10 @@ export async function analyzePoFile(input: AnalyzePoFileInput): Promise<AnalyzeP
   const untranslated_entries = PoParser.getUntranslatedEntries(entries);
   const fuzzy_entries = PoParser.getFuzzyEntries(entries);
 
-  // Auto-detect locale from path if not provided
-  let detectedLocale = locale || 'unknown';
-  if (!locale) {
-    const localeMatch = absolutePath.match(/locale\/([^/]+)\//);
-    if (localeMatch) {
-      detectedLocale = localeMatch[1];
-    }
-  }
-
   return {
+    file_path: absolutePath,
     statistics,
     untranslated_entries,
-    fuzzy_entries,
-    file_info: {
-      path: absolutePath,
-      locale: detectedLocale,
-      last_modified: stats.mtime.toISOString()
-    }
+    fuzzy_entries
   };
 }

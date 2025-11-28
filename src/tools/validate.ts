@@ -61,12 +61,7 @@ function extractPatterns(text: string): ExtractedPatterns {
 
 export interface ValidateTranslationsInput {
   translations: TranslationEntry[];
-  strict_mode: boolean;
-  check_variables: boolean;
-  check_html: boolean;
-  check_urls: boolean;
-  check_javascript: boolean;
-  check_length: boolean;
+  strict: boolean;  // Enable all validation checks
 }
 
 export interface ValidateTranslationsOutput {
@@ -83,15 +78,14 @@ export interface ValidateTranslationsOutput {
 export async function validateTranslations(
   input: ValidateTranslationsInput
 ): Promise<ValidateTranslationsOutput> {
-  const {
-    translations,
-    strict_mode,
-    check_variables,
-    check_html,
-    check_urls,
-    check_javascript,
-    check_length
-  } = input;
+  const { translations, strict } = input;
+
+  // When strict=true, all checks are enabled
+  const check_variables = strict;
+  const check_html = strict;
+  const check_urls = strict;
+  const check_javascript = strict;
+  const check_length = false; // Length check always disabled (too noisy)
 
   const validation_results: ValidationResult[] = [];
   let valid_count = 0;
@@ -102,22 +96,8 @@ export async function validateTranslations(
     const issues: string[] = [];
     const warnings: string[] = [];
 
-    // Skip validation for skipped translations
-    if (translation.skipped) {
-      validation_results.push({
-        msgid: translation.msgid,
-        msgstr: translation.msgstr_translated,
-        valid: true,
-        issues: [],
-        warnings: [`Skipped: ${translation.skip_reason}`]
-      });
-      warnings_count++;
-      valid_count++;
-      continue;
-    }
-
     const msgid = translation.msgid;
-    const msgstr = translation.msgstr_translated;
+    const msgstr = translation.msgstr;
 
     // Extract patterns from source and translation
     const sourcePatterns = extractPatterns(msgid);
@@ -223,20 +203,20 @@ export async function validateTranslations(
     }
 
     // In strict mode, warnings become issues
-    if (strict_mode && has_warnings) {
+    if (strict && has_warnings) {
       issues.push(...warnings);
     }
 
     validation_results.push({
       msgid,
       msgstr,
-      valid: strict_mode ? (is_valid && !has_warnings) : is_valid,
+      valid: strict ? (is_valid && !has_warnings) : is_valid,
       issues,
-      warnings: strict_mode ? [] : warnings
+      warnings: strict ? [] : warnings
     });
   }
 
-  const overall_valid = invalid_count === 0 && (!strict_mode || warnings_count === 0);
+  const overall_valid = invalid_count === 0 && (!strict || warnings_count === 0);
 
   return {
     validation_results,

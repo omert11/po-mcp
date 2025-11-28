@@ -52,14 +52,11 @@ export class PoParser {
         const poEntry: PoEntry = {
           msgid: msgid,
           msgstr: entry.msgstr ? entry.msgstr[0] : '',
-          reference: references,
-          line_number: lineNumber,
-          context: entry.msgctxt || null,
-          flags: entry.comments?.flag
-            ? entry.comments.flag.split(',').map((f: string) => f.trim())
-            : []
+          context: entry.msgctxt || null
         };
 
+        // Store with internal fuzzy flag for filtering
+        (poEntry as any)._fuzzy = isFuzzy;
         entries.push(poEntry);
 
         // Update statistics
@@ -90,17 +87,21 @@ export class PoParser {
   }
 
   /**
-   * Extract untranslated entries
+   * Extract untranslated entries (empty msgstr, not fuzzy)
    */
   static getUntranslatedEntries(entries: PoEntry[]): PoEntry[] {
-    return entries.filter(entry => entry.msgstr === '' && !entry.flags.includes('fuzzy'));
+    return entries
+      .filter(entry => entry.msgstr === '' && !(entry as any)._fuzzy)
+      .map(({ msgid, msgstr, context }) => ({ msgid, msgstr, context })); // Strip internal flags
   }
 
   /**
    * Extract fuzzy entries
    */
   static getFuzzyEntries(entries: PoEntry[]): PoEntry[] {
-    return entries.filter(entry => entry.flags.includes('fuzzy'));
+    return entries
+      .filter(entry => (entry as any)._fuzzy)
+      .map(({ msgid, msgstr, context }) => ({ msgid, msgstr, context })); // Strip internal flags
   }
 
   /**

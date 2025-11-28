@@ -27,10 +27,6 @@ const TOOLS: Tool[] = [
         po_file_path: {
           type: 'string',
           description: 'Absolute path to the .po file (e.g., "/Users/name/project/locale/tr/LC_MESSAGES/django.po")'
-        },
-        locale: {
-          type: 'string',
-          description: 'Optional locale code (e.g., "tr", "en"). Auto-detected if not provided.'
         }
       },
       required: ['po_file_path']
@@ -56,80 +52,31 @@ const TOOLS: Tool[] = [
                 type: 'string',
                 description: 'Original text (source language)'
               },
-              msgstr_original: {
+              msgstr: {
                 type: 'string',
-                description: 'Original translation (empty string if untranslated)'
+                description: 'New translation'
               },
-              msgstr_translated: {
-                type: 'string',
-                description: 'New translation to validate and apply'
-              },
-              line_number: {
-                type: ['number', 'null'],
-                description: 'Line number in .po file (optional)'
-              },
-              reference: {
-                type: 'string',
-                description: 'Source code reference (e.g., "file.html:123")'
-              },
-              skipped: {
-                type: 'boolean',
-                description: 'Whether this translation was skipped'
-              },
-              skip_reason: {
+              context: {
                 type: ['string', 'null'],
-                description: 'Reason for skipping (null if not skipped)'
+                description: 'msgctxt for disambiguation (null if not used)'
               }
             },
-            required: [
-              'msgid',
-              'msgstr_original',
-              'msgstr_translated',
-              'line_number',
-              'reference',
-              'skipped',
-              'skip_reason'
-            ]
+            required: ['msgid', 'msgstr', 'context']
           }
         },
-        strict_mode: {
+        strict: {
           type: 'boolean',
-          description: 'Treat warnings as errors (default: true)',
+          description: 'Enable all validation checks (variables, HTML, URLs, JavaScript). Default: true',
           default: true
-        },
-        check_variables: {
-          type: 'boolean',
-          description: 'Check variable preservation (default: true)',
-          default: true
-        },
-        check_html: {
-          type: 'boolean',
-          description: 'Check HTML tag preservation (default: true)',
-          default: true
-        },
-        check_urls: {
-          type: 'boolean',
-          description: 'Check URL preservation (default: true)',
-          default: true
-        },
-        check_javascript: {
-          type: 'boolean',
-          description: 'Check JavaScript code preservation (default: true)',
-          default: true
-        },
-        check_length: {
-          type: 'boolean',
-          description: 'Check translation length ratio (default: false)',
-          default: false
         },
         dry_run: {
           type: 'boolean',
-          description: 'Preview changes without writing (default: false)',
+          description: 'Preview changes without writing. Default: false',
           default: false
         },
-        force_update: {
+        force: {
           type: 'boolean',
-          description: 'Update file even if some translations are invalid (default: false)',
+          description: 'Update file even if some translations are invalid. Default: false',
           default: false
         }
       },

@@ -28,7 +28,6 @@ export async function updatePoFile(input: UpdatePoFileInput): Promise<UpdatePoFi
 
   const errors: string[] = [];
   let updated_entries = 0;
-  let skipped_entries = 0;
 
   try {
     // Check if file exists
@@ -41,32 +40,28 @@ export async function updatePoFile(input: UpdatePoFileInput): Promise<UpdatePoFi
     const cleanedContent = PoParser.preprocessPoContent(content.toString('utf-8'));
     const parsed = gettextParser.po.parse(Buffer.from(cleanedContent, 'utf-8'));
 
-    // Create translation map for quick lookup
+    // Create translation map for quick lookup (key = context|msgid)
     const translationMap = new Map<string, TranslationEntry>();
     for (const translation of translations) {
-      if (!translation.skipped) {
-        translationMap.set(translation.msgid, translation);
-      } else {
-        skipped_entries++;
-      }
+      const key = `${translation.context || ''}|${translation.msgid}`;
+      translationMap.set(key, translation);
     }
 
     // Update entries
     const contexts = parsed.translations || {};
     for (const contextKey of Object.keys(contexts)) {
-      const context = contexts[contextKey];
-      for (const msgidKey of Object.keys(context)) {
+      const contextEntries = contexts[contextKey];
+      for (const msgidKey of Object.keys(contextEntries)) {
         if (msgidKey === '') continue; // Skip header
 
-        const entry = context[msgidKey] as any;
-        // Use msgidKey directly as it's the actual msgid string from gettext-parser
-        const msgid = msgidKey;
+        const entry = contextEntries[msgidKey] as any;
+        const key = `${contextKey}|${msgidKey}`;
 
-        if (translationMap.has(msgid)) {
-          const translation = translationMap.get(msgid)!;
+        if (translationMap.has(key)) {
+          const translation = translationMap.get(key)!;
 
           // Update msgstr
-          entry.msgstr = [translation.msgstr_translated];
+          entry.msgstr = [translation.msgstr];
 
           // Remove fuzzy flag if present
           if (entry.comments && entry.comments.flag) {
@@ -89,9 +84,7 @@ export async function updatePoFile(input: UpdatePoFileInput): Promise<UpdatePoFi
     return {
       success: true,
       updated_entries,
-      skipped_entries,
       file_path: po_file_path,
-      git_diff_preview: dry_run ? `${updated_entries} entries would be updated` : `${updated_entries} entries updated`,
       errors
     };
 
@@ -100,9 +93,7 @@ export async function updatePoFile(input: UpdatePoFileInput): Promise<UpdatePoFi
     return {
       success: false,
       updated_entries: 0,
-      skipped_entries: 0,
       file_path: po_file_path,
-      git_diff_preview: '',
       errors
     };
   }
