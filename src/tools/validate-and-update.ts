@@ -43,25 +43,21 @@ export async function validateAndUpdatePoFile(
   });
 
   // Step 2: Decide whether to update
-  const shouldUpdate = validation.overall_valid || force;
+  const shouldUpdate = validation.valid || force;
 
   if (!shouldUpdate) {
     return {
       validation,
       update: null,
-      message: `Validation failed: ${validation.summary.invalid} invalid translations found. Use force=true to update anyway.`
+      message: `Validation failed: ${validation.invalids.length} invalid. Use force=true to update anyway.`
     };
   }
 
   // Step 3: Filter valid translations only (unless force)
   let translationsToUpdate = translations;
-  if (!force) {
-    const validMsgids = new Set(
-      validation.validation_results
-        .filter(r => r.valid)
-        .map(r => r.msgid)
-    );
-    translationsToUpdate = translations.filter(t => validMsgids.has(t.msgid));
+  if (!force && validation.invalids.length > 0) {
+    const invalidMsgids = new Set(validation.invalids.map(r => r.msgid));
+    translationsToUpdate = translations.filter(t => !invalidMsgids.has(t.msgid));
   }
 
   // Step 4: Update PO file
@@ -73,14 +69,14 @@ export async function validateAndUpdatePoFile(
 
   // Generate result message
   let message = '';
-  if (validation.overall_valid) {
+  if (validation.valid) {
     message = dry_run
-      ? `All ${validation.summary.valid} translations valid. Would update ${update.updated_entries} entries.`
-      : `Successfully validated and updated ${update.updated_entries} translations.`;
+      ? `All ${validation.total} valid. Would update ${update.updated_entries} entries.`
+      : `Updated ${update.updated_entries} translations.`;
   } else if (force) {
     message = dry_run
-      ? `${validation.summary.invalid} invalid translations found. Would force update ${update.updated_entries} entries.`
-      : `Force updated ${update.updated_entries} translations (${validation.summary.invalid} were invalid).`;
+      ? `${validation.invalids.length} invalid. Would force update ${update.updated_entries} entries.`
+      : `Force updated ${update.updated_entries} (${validation.invalids.length} were invalid).`;
   }
 
   return {

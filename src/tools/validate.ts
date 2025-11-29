@@ -65,14 +65,9 @@ export interface ValidateTranslationsInput {
 }
 
 export interface ValidateTranslationsOutput {
-  validation_results: ValidationResult[];
-  summary: {
-    total: number;
-    valid: number;
-    invalid: number;
-    has_warnings: number;
-  };
-  overall_valid: boolean;
+  invalids: ValidationResult[];
+  total: number;
+  valid: boolean;
 }
 
 export async function validateTranslations(
@@ -216,16 +211,14 @@ export async function validateTranslations(
     });
   }
 
-  const overall_valid = invalid_count === 0 && (!strict || warnings_count === 0);
+  const is_valid = invalid_count === 0 && (!strict || warnings_count === 0);
+
+  // Only return invalid entries
+  const invalids = validation_results.filter(r => !r.valid);
 
   return {
-    validation_results,
-    summary: {
-      total: translations.length,
-      valid: valid_count,
-      invalid: invalid_count,
-      has_warnings: warnings_count
-    },
-    overall_valid
+    invalids,
+    total: translations.length,
+    valid: is_valid
   };
 }
