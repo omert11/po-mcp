@@ -17,55 +17,51 @@ export class PoParser {
   } {
     try {
       const content = readFileSync(filePath);
+      const rawContent = content.toString('utf-8');
 
       // Pre-process content to handle obsolete fuzzy entries with previous msgid
-      const cleanedContent = this.preprocessPoContent(content.toString('utf-8'));
+      const cleanedContent = this.preprocessPoContent(rawContent);
 
       const parsed = gettextParser.po.parse(Buffer.from(cleanedContent, 'utf-8'));
 
-      // Build line number map by parsing raw text
-      const lineMap = this.buildLineNumberMap(content.toString('utf-8'));
+      // Build line number map by parsing raw text (includes context)
+      const lineMap = this.buildLineNumberMap(rawContent);
 
       const entries: PoEntry[] = [];
-      const translations = parsed.translations[''] || {};
 
       let translated = 0;
       let untranslated = 0;
       let fuzzy = 0;
 
-      // Extract entries
-      for (const [msgid, rawEntry] of Object.entries(translations)) {
-        if (!msgid) continue; // Skip header entry
+      // Iterate over ALL context namespaces, not just ''
+      // gettext-parser stores entries as: translations[context][msgid]
+      for (const [contextKey, contextTranslations] of Object.entries(parsed.translations)) {
+        for (const [msgid, rawEntry] of Object.entries(contextTranslations as Record<string, any>)) {
+          if (!msgid) continue; // Skip header entry (empty msgid in '' context)
 
-        // Type assertion for entry
-        const entry = rawEntry as any;
+          const entry = rawEntry as any;
 
-        const isFuzzy = entry.comments?.flag?.includes('fuzzy') || false;
-        const isEmpty = !entry.msgstr || entry.msgstr[0] === '';
+          const isFuzzy = entry.comments?.flag?.includes('fuzzy') || false;
+          const isEmpty = !entry.msgstr || entry.msgstr[0] === '';
 
-        // Build references
-        const references = entry.comments?.reference || '';
+          const poEntry: PoEntry = {
+            msgid: msgid,
+            msgstr: entry.msgstr ? entry.msgstr[0] : '',
+            context: contextKey || null  // '' becomes null for no context
+          };
 
-        // Find line number for this msgid
-        const lineNumber = lineMap.get(msgid) || null;
+          // Store with internal fuzzy flag for filtering
+          (poEntry as any)._fuzzy = isFuzzy;
+          entries.push(poEntry);
 
-        const poEntry: PoEntry = {
-          msgid: msgid,
-          msgstr: entry.msgstr ? entry.msgstr[0] : '',
-          context: entry.msgctxt || null
-        };
-
-        // Store with internal fuzzy flag for filtering
-        (poEntry as any)._fuzzy = isFuzzy;
-        entries.push(poEntry);
-
-        // Update statistics
-        if (isFuzzy) {
-          fuzzy++;
-        } else if (isEmpty) {
-          untranslated++;
-        } else {
-          translated++;
+          // Update statistics
+          if (isFuzzy) {
+            fuzzy++;
+          } else if (isEmpty) {
+            untranslated++;
+          } else {
+            translated++;
+          }
         }
       }
 
